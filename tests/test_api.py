@@ -5,12 +5,9 @@ from app.database import get_db, Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import pytest
+from app.core.config import settings
 
 # Use a separate test database or mock
-# For simplicity in this assignment, we'll use the same DB but we should be careful.
-# Ideally we use sqlite for testing or a separate postgres db.
-# Let's mock the DB session to use a temporary sqlite db for tests to avoid messing with real data.
-
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(
@@ -31,38 +28,42 @@ app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
+API_V1_STR = settings.API_V1_STR
+
 def test_read_clips():
     # Seed some data
     db = TestingSessionLocal()
+    # Clear existing data
+    db.query(models.Clip).delete()
+    
     clip = models.Clip(title="Test Clip", genre="Test", duration=10.0, audio_url="http://example.com/audio.mp3")
     db.add(clip)
     db.commit()
     db.close()
 
-    response = client.get("/play/")
+    response = client.get(f"{API_V1_STR}/play/")
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0
     assert data[0]["title"] == "Test Clip"
 
 def test_stream_clip():
-    # We need a clip ID. 
-    # Since we are using a fresh sqlite db, the ID should be 1 (if it's the first test running or we reset)
-    # But let's fetch one first
-    response = client.get("/play/")
+    response = client.get(f"{API_V1_STR}/play/")
     clip_id = response.json()[0]["id"]
     
-    # Mock requests.get to avoid actual network call
-    # For now, let's just check if endpoint is reachable. 
-    # The stream endpoint does a request to audio_url. 
-    # We can just test 404 for non-existent clip
-    response = client.get("/play/9999/stream")
+    # Mock requests.get would be better, but for now we test 404 for non-existent
+    response = client.get(f"{API_V1_STR}/play/9999/stream")
     assert response.status_code == 404
 
 def test_get_stats():
-    response = client.get("/play/")
+    response = client.get(f"{API_V1_STR}/play/")
     clip_id = response.json()[0]["id"]
     
-    response = client.get(f"/play/{clip_id}/stats")
+    response = client.get(f"{API_V1_STR}/play/{clip_id}/stats")
     assert response.status_code == 200
     assert "play_count" in response.json()
+
+def test_frontend_serve():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Soundverse Play" in response.text

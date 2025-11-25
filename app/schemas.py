@@ -31,7 +31,7 @@ class Clip(ClipBase):
     play_count: int = Field(..., description="The number of times the clip has been played")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ClipStats(BaseModel):
