@@ -6,3 +6,4 @@ starlette-exporter
 python-multipart
 python-dotenv
 requests
+pydantic-settings

@@ -14,12 +14,12 @@ app = FastAPI(title=settings.PROJECT_NAME)
 app.add_middleware(PrometheusMiddleware)
 app.add_route("/metrics", handle_metrics)
 
-# Include API router
-app.include_router(api_router, prefix=settings.API_V1_STR)
-
-# Mount static files for frontend
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# Include API router BEFORE static files
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Mount static files for frontend (this should be last)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
